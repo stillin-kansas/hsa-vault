@@ -793,8 +793,8 @@ function ExpenseForm({initial, onSave, onClose, title, subtitle, saveLabel}) {
         <label style={lbl}>Date of Expense *</label>
         <input style={inp} type="date" value={form.date} onChange={e=>set("date",e.target.value)}/>
 
-        <label style={lbl}>Patient Name *</label>
-        <input style={inp} type="text" placeholder="e.g. John, Sarah, Mom…" value={form.patient||""} onChange={e=>set("patient",e.target.value)}/>
+        <label style={lbl}>For *</label>
+        <input style={inp} type="text" placeholder="e.g. John, Sarah…" value={form.patient||""} onChange={e=>set("patient",e.target.value)}/>
 
         <label style={lbl}>Provider / Facility *</label>
         <input style={inp} type="text" placeholder="Dr. Smith, CVS Pharmacy…" value={form.provider} onChange={e=>set("provider",e.target.value)}/>
@@ -1045,13 +1045,14 @@ function History({expenses,onDelete,onToggle,onEdit}) {
     .filter(e=>cat==="All"||e.category===cat)
     .filter(e=>status==="All"||(status==="Pending"?!e.reimbursed:e.reimbursed))
     .filter(e=>patientFilter==="All"||e.patient===patientFilter)
-    .filter(e=>!search||e.provider?.toLowerCase().includes(search.toLowerCase())||e.notes?.toLowerCase().includes(search.toLowerCase())||e.patient?.toLowerCase().includes(search.toLowerCase()))
+    .filter(e=>!search||e.provider?.toLowerCase().includes(search.toLowerCase())||e.notes?.toLowerCase().includes(search.toLowerCase())||e.subcategory?.toLowerCase().includes(search.toLowerCase())||String(e.amount||"").includes(search))
     .sort((a,b)=>{
       if(sort==="date-new") return b.date.localeCompare(a.date);
       if(sort==="date-old") return a.date.localeCompare(b.date);
       if(sort==="amount-high") return (parseFloat(b.amount)||0)-(parseFloat(a.amount)||0);
       if(sort==="amount-low")  return (parseFloat(a.amount)||0)-(parseFloat(b.amount)||0);
       if(sort==="patient")     return (a.patient||"").localeCompare(b.patient||"");
+      if(sort==="patient-z")   return (b.patient||"").localeCompare(a.patient||"");
       return 0;
     });
 
@@ -1062,7 +1063,7 @@ function History({expenses,onDelete,onToggle,onEdit}) {
       <div className="fu" style={{fontFamily:"'DM Serif Display',serif",fontSize:26,color:"#f8fafc",marginBottom:16}}>All Expenses</div>
       <div className="fu1" style={{position:"relative",marginBottom:14}}>
         <span style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",fontSize:14,color:"rgba(100,116,139,0.5)"}}>⌕</span>
-        <input className="glass" style={{width:"100%",border:"1px solid rgba(255,255,255,0.07)",borderRadius:14,color:"#e2e8f0",fontSize:14,padding:"12px 14px 12px 36px",outline:"none",fontFamily:"'Outfit',sans-serif",boxSizing:"border-box",background:"rgba(15,23,42,0.5)"}} placeholder="Search provider, patient, or notes…" value={search} onChange={e=>setSearch(e.target.value)}/>
+        <input className="glass" style={{width:"100%",border:"1px solid rgba(255,255,255,0.07)",borderRadius:14,color:"#e2e8f0",fontSize:14,padding:"12px 14px 12px 36px",outline:"none",fontFamily:"'Outfit',sans-serif",boxSizing:"border-box",background:"rgba(15,23,42,0.5)"}} placeholder="Search expenses…" value={search} onChange={e=>setSearch(e.target.value)}/>
       </div>
       <YearTabs year={year} setYear={setYear}/>
 
@@ -1076,10 +1077,20 @@ function History({expenses,onDelete,onToggle,onEdit}) {
       </div>
 
       {/* Sort */}
-      <div className="fu2" style={{display:"flex",gap:6,overflowX:"auto",marginBottom:10,scrollbarWidth:"none",paddingBottom:2}}>
-        {[["date-new","Newest"],["date-old","Oldest"],["amount-high","$ High"],["amount-low","$ Low"],["patient","Patient"]].map(([v,l])=>(
-          <button key={v} className="pill" onClick={()=>setSort(v)} style={{padding:"5px 12px",borderRadius:20,border:`1px solid ${sort===v?"rgba(139,92,246,0.5)":"rgba(255,255,255,0.05)"}`,background:sort===v?"rgba(139,92,246,0.12)":"transparent",color:sort===v?"#c084fc":"rgba(100,116,139,0.6)",fontSize:11,fontWeight:600,fontFamily:"'Outfit',sans-serif",cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>{l}</button>
-        ))}
+      <div className="fu2" style={{display:"flex",gap:6,marginBottom:10,alignItems:"center"}}>
+        <span style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(100,116,139,0.4)",flexShrink:0}}>Sort</span>
+        {/* Date toggle */}
+        <button className="pill" onClick={()=>setSort(s=>s==="date-new"?"date-old":"date-new")} style={{padding:"5px 12px",borderRadius:20,border:`1px solid ${sort.startsWith("date")?"rgba(139,92,246,0.5)":"rgba(255,255,255,0.05)"}`,background:sort.startsWith("date")?"rgba(139,92,246,0.12)":"transparent",color:sort.startsWith("date")?"#c084fc":"rgba(100,116,139,0.6)",fontSize:11,fontWeight:600,fontFamily:"'Outfit',sans-serif",cursor:"pointer",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:4}}>
+          Date {sort==="date-new"?"↓":sort==="date-old"?"↑":"↓"}
+        </button>
+        {/* Amount toggle */}
+        <button className="pill" onClick={()=>setSort(s=>s==="amount-high"?"amount-low":"amount-high")} style={{padding:"5px 12px",borderRadius:20,border:`1px solid ${sort.startsWith("amount")?"rgba(139,92,246,0.5)":"rgba(255,255,255,0.05)"}`,background:sort.startsWith("amount")?"rgba(139,92,246,0.12)":"transparent",color:sort.startsWith("amount")?"#c084fc":"rgba(100,116,139,0.6)",fontSize:11,fontWeight:600,fontFamily:"'Outfit',sans-serif",cursor:"pointer",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:4}}>
+          $ {sort==="amount-high"?"↓":sort==="amount-low"?"↑":"↓"}
+        </button>
+        {/* Patient A-Z toggle */}
+        <button className="pill" onClick={()=>setSort(s=>s==="patient"?"patient-z":"patient")} style={{padding:"5px 12px",borderRadius:20,border:`1px solid ${sort.startsWith("patient")?"rgba(139,92,246,0.5)":"rgba(255,255,255,0.05)"}`,background:sort.startsWith("patient")?"rgba(139,92,246,0.12)":"transparent",color:sort.startsWith("patient")?"#c084fc":"rgba(100,116,139,0.6)",fontSize:11,fontWeight:600,fontFamily:"'Outfit',sans-serif",cursor:"pointer",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:4}}>
+          Name {sort==="patient"?"A→Z":sort==="patient-z"?"Z→A":"A→Z"}
+        </button>
       </div>
 
       {/* Patient filter — only show if multiple patients */}
@@ -1644,3 +1655,4 @@ export default function App({ user }) {
     </div>
   );
 }
+
