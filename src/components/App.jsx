@@ -286,6 +286,10 @@ function SlideWhat() {
       <div style={{marginTop:14,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:14,padding:"13px 15px"}}>
         <div style={{fontSize:12,color:"rgba(148,163,184,0.7)",lineHeight:1.7}}>No other account in the U.S. tax code offers all three of these benefits at once — not a 401(k), not a Roth IRA.</div>
       </div>
+      <div style={{marginTop:10,background:"rgba(251,191,36,0.08)",border:"1px solid rgba(251,191,36,0.18)",borderRadius:14,padding:"13px 15px"}}>
+        <div style={{fontSize:12,fontWeight:700,color:"#fbbf24",marginBottom:4}}>💡 Already had an HSA?</div>
+        <div style={{fontSize:12,color:"rgba(148,163,184,0.75)",lineHeight:1.7}}>If you've ever had an HSA — even years ago — those funds are still yours and can be used at any time for qualified medical expenses that occurred after the account was opened. It's never too late to start tracking.</div>
+      </div>
     </div>
   );
 }
@@ -303,10 +307,25 @@ function SlideRule() {
       <div style={{fontSize:14,lineHeight:1.8,color:"rgba(148,163,184,0.85)",marginBottom:20}}>
         The IRS allows you to reimburse yourself for any qualified medical expense — no matter how old — as long as it occurred after your HSA was opened. A bill from 2019 can be claimed in 2045.
       </div>
-      <div style={{background:"rgba(56,189,248,0.08)",border:"1px solid rgba(56,189,248,0.2)",borderRadius:16,padding:"18px",marginBottom:16,textAlign:"center"}}>
-        <div style={{fontFamily:"'Outfit',sans-serif",fontSize:52,fontWeight:900,color:"#38bdf8",lineHeight:1,animation:"onboardIn 0.5s 0.3s both"}}>No</div>
-        <div style={{fontSize:15,fontWeight:700,color:"rgba(226,232,240,0.9)",marginTop:4}}>expiration date</div>
-        <div style={{fontSize:12,color:"rgba(100,116,139,0.7)",marginTop:3}}>on your medical receipts</div>
+      <div style={{background:"rgba(56,189,248,0.08)",border:"1px solid rgba(56,189,248,0.2)",borderRadius:16,padding:"18px",marginBottom:16}}>
+        <div style={{fontSize:11,fontWeight:700,color:"rgba(56,189,248,0.7)",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:14}}>Example Timeline</div>
+        {[
+          {yr:"2020",event:"You open your HSA account",c:"#38bdf8",icon:"🏦"},
+          {yr:"2021",event:"$800 dental bill — paid out of pocket, logged here",c:"#fbbf24",icon:"🦷"},
+          {yr:"2024",event:"$1,200 surgery — paid out of pocket, logged here",c:"#f472b6",icon:"🏥"},
+          {yr:"2045",event:"Retire — claim both expenses tax-free from HSA",c:"#34d399",icon:"🎉"},
+        ].map((item,i,arr)=>(
+          <div key={i} style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:i<arr.length-1?12:0}}>
+            <div style={{display:"flex",flexDirection:"column",alignItems:"center",flexShrink:0}}>
+              <div style={{width:32,height:32,borderRadius:10,background:`${item.c}18`,border:`1px solid ${item.c}35`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>{item.icon}</div>
+              {i<arr.length-1&&<div style={{width:1,height:16,background:`rgba(255,255,255,0.08)`,margin:"3px 0"}}/>}
+            </div>
+            <div style={{paddingTop:4}}>
+              <div style={{fontSize:11,fontWeight:700,color:item.c,marginBottom:2}}>{item.yr}</div>
+              <div style={{fontSize:12,color:"rgba(148,163,184,0.8)",lineHeight:1.5}}>{item.event}</div>
+            </div>
+          </div>
+        ))}
       </div>
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
         {[
@@ -337,7 +356,10 @@ function SlideComparison() {
   const fmtK = n => `$${Math.round(n/1000)}k`;
   return (
     <div className="ob-in" style={{padding:"0 24px 32px"}}>
-      <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.18em",textTransform:"uppercase",color:"#34d399",marginBottom:10,textAlign:"center",marginTop:4}}>The Real Math</div>
+      <div style={{display:"flex",justifyContent:"center",marginBottom:20,marginTop:4}}>
+        <div className="float-icon" style={{width:90,height:90,borderRadius:24,background:"radial-gradient(circle at 35% 35%,rgba(52,211,153,0.25),rgba(52,211,153,0.06))",border:"1px solid rgba(52,211,153,0.35)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:44,boxShadow:"0 0 36px rgba(52,211,153,0.35)"}}>📈</div>
+      </div>
+      <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.18em",textTransform:"uppercase",color:"#34d399",marginBottom:10,textAlign:"center"}}>The Real Math</div>
       <div style={{fontFamily:"'DM Serif Display',serif",fontSize:24,lineHeight:1.3,color:"#f8fafc",textAlign:"center",marginBottom:6}}>
         Your receipts don't just organize expenses. They eliminate your tax bill.
       </div>
@@ -768,8 +790,11 @@ function ExpenseForm({initial, onSave, onClose, title, subtitle, saveLabel}) {
           <button onClick={onClose} style={{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"50%",width:32,height:32,color:"rgba(148,163,184,0.7)",cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
         </div>
 
-        <label style={lbl}>Date *</label>
+        <label style={lbl}>Date of Expense *</label>
         <input style={inp} type="date" value={form.date} onChange={e=>set("date",e.target.value)}/>
+
+        <label style={lbl}>Patient Name *</label>
+        <input style={inp} type="text" placeholder="e.g. John, Sarah, Mom…" value={form.patient||""} onChange={e=>set("patient",e.target.value)}/>
 
         <label style={lbl}>Provider / Facility *</label>
         <input style={inp} type="text" placeholder="Dr. Smith, CVS Pharmacy…" value={form.provider} onChange={e=>set("provider",e.target.value)}/>
@@ -864,7 +889,7 @@ function ExpenseForm({initial, onSave, onClose, title, subtitle, saveLabel}) {
 }
 
 function AddModal({onClose,onSave}) {
-  const blank={date:new Date().toISOString().slice(0,10),amount:"",provider:"",category:"Doctor & Hospital",subcategory:"",paymentType:"Credit Card",notes:"",fileName:"",reimbursed:false};
+  const blank={date:new Date().toISOString().slice(0,10),amount:"",patient:"",provider:"",category:"Doctor & Hospital",subcategory:"",paymentType:"Credit Card",notes:"",fileName:"",reimbursed:false};
   return <ExpenseForm initial={blank} onSave={e=>{onSave({...e,id:uid()});}} onClose={onClose} title="Log Expense" subtitle="Add a medical expense to your vault" saveLabel="Save Expense"/>;
 }
 
@@ -913,7 +938,7 @@ function ExpRow({expense,onDelete,onToggle,onEdit,delay=0}) {
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20}}>
               <div>
                 <div style={{fontFamily:"'DM Serif Display',serif",fontSize:20,color:"#f8fafc",marginBottom:2}}>{expense.provider}</div>
-                <div style={{fontSize:12,color:"rgba(100,116,139,0.6)"}}>{fmtDate(expense.date)}</div>
+                <div style={{fontSize:12,color:"rgba(100,116,139,0.6)"}}>{fmtDate(expense.date)}{expense.patient?` · ${expense.patient}`:""}</div>
               </div>
               <div style={{textAlign:"right"}}>
                 <div style={{fontFamily:"'Outfit',sans-serif",fontSize:26,fontWeight:800,color:expense.reimbursed?"#34d399":"#f8fafc"}}>{fmt(expense.amount)}</div>
@@ -1009,12 +1034,27 @@ function History({expenses,onDelete,onToggle,onEdit}) {
   const [search,setSearch]=useState("");
   const [cat,setCat]=useState("All");
   const [status,setStatus]=useState("All");
+  const [sort,setSort]=useState("date-new");
+  const [patientFilter,setPatientFilter]=useState("All");
+
+  // Build unique patient list
+  const patients=["All",...[...new Set(expenses.map(e=>e.patient).filter(Boolean))].sort()];
+
   const filtered=expenses
     .filter(e=>year==="all"||new Date(e.date+"T00:00:00").getFullYear()===year)
     .filter(e=>cat==="All"||e.category===cat)
     .filter(e=>status==="All"||(status==="Pending"?!e.reimbursed:e.reimbursed))
-    .filter(e=>!search||e.provider?.toLowerCase().includes(search.toLowerCase())||e.notes?.toLowerCase().includes(search.toLowerCase()))
-    .sort((a,b)=>b.date.localeCompare(a.date));
+    .filter(e=>patientFilter==="All"||e.patient===patientFilter)
+    .filter(e=>!search||e.provider?.toLowerCase().includes(search.toLowerCase())||e.notes?.toLowerCase().includes(search.toLowerCase())||e.patient?.toLowerCase().includes(search.toLowerCase()))
+    .sort((a,b)=>{
+      if(sort==="date-new") return b.date.localeCompare(a.date);
+      if(sort==="date-old") return a.date.localeCompare(b.date);
+      if(sort==="amount-high") return (parseFloat(b.amount)||0)-(parseFloat(a.amount)||0);
+      if(sort==="amount-low")  return (parseFloat(a.amount)||0)-(parseFloat(b.amount)||0);
+      if(sort==="patient")     return (a.patient||"").localeCompare(b.patient||"");
+      return 0;
+    });
+
   const total=filtered.reduce((s,e)=>s+(parseFloat(e.amount)||0),0);
   const reimb=filtered.filter(e=>e.reimbursed).reduce((s,e)=>s+(parseFloat(e.amount)||0),0);
   return (
@@ -1022,21 +1062,42 @@ function History({expenses,onDelete,onToggle,onEdit}) {
       <div className="fu" style={{fontFamily:"'DM Serif Display',serif",fontSize:26,color:"#f8fafc",marginBottom:16}}>All Expenses</div>
       <div className="fu1" style={{position:"relative",marginBottom:14}}>
         <span style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",fontSize:14,color:"rgba(100,116,139,0.5)"}}>⌕</span>
-        <input className="glass" style={{width:"100%",border:"1px solid rgba(255,255,255,0.07)",borderRadius:14,color:"#e2e8f0",fontSize:14,padding:"12px 14px 12px 36px",outline:"none",fontFamily:"'Outfit',sans-serif",boxSizing:"border-box",background:"rgba(15,23,42,0.5)"}} placeholder="Search provider or notes…" value={search} onChange={e=>setSearch(e.target.value)}/>
+        <input className="glass" style={{width:"100%",border:"1px solid rgba(255,255,255,0.07)",borderRadius:14,color:"#e2e8f0",fontSize:14,padding:"12px 14px 12px 36px",outline:"none",fontFamily:"'Outfit',sans-serif",boxSizing:"border-box",background:"rgba(15,23,42,0.5)"}} placeholder="Search provider, patient, or notes…" value={search} onChange={e=>setSearch(e.target.value)}/>
       </div>
       <YearTabs year={year} setYear={setYear}/>
-      <div className="fu2" style={{display:"flex",gap:6,marginBottom:12}}>
+
+      {/* Status filter */}
+      <div className="fu2" style={{display:"flex",gap:6,marginBottom:10}}>
         {[["All","rgba(148,163,184,0.6)"],["Pending","#fbbf24"],["Reimbursed","#34d399"]].map(([s,c])=>(
           <button key={s} className="pill" onClick={()=>setStatus(s)} style={{padding:"6px 14px",borderRadius:20,border:`1px solid ${status===s?c:"rgba(255,255,255,0.06)"}`,background:status===s?`${c}18`:"transparent",color:status===s?c:"rgba(100,116,139,0.7)",fontSize:12,fontWeight:600,fontFamily:"'Outfit',sans-serif",cursor:"pointer"}}>
             {s==="Pending"?"⏳ ":s==="Reimbursed"?"✓ ":""}{s}
           </button>
         ))}
       </div>
+
+      {/* Sort */}
+      <div className="fu2" style={{display:"flex",gap:6,overflowX:"auto",marginBottom:10,scrollbarWidth:"none",paddingBottom:2}}>
+        {[["date-new","Newest"],["date-old","Oldest"],["amount-high","$ High"],["amount-low","$ Low"],["patient","Patient"]].map(([v,l])=>(
+          <button key={v} className="pill" onClick={()=>setSort(v)} style={{padding:"5px 12px",borderRadius:20,border:`1px solid ${sort===v?"rgba(139,92,246,0.5)":"rgba(255,255,255,0.05)"}`,background:sort===v?"rgba(139,92,246,0.12)":"transparent",color:sort===v?"#c084fc":"rgba(100,116,139,0.6)",fontSize:11,fontWeight:600,fontFamily:"'Outfit',sans-serif",cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>{l}</button>
+        ))}
+      </div>
+
+      {/* Patient filter — only show if multiple patients */}
+      {patients.length>2&&(
+        <div className="fu2" style={{display:"flex",gap:5,overflowX:"auto",marginBottom:10,scrollbarWidth:"none",paddingBottom:2}}>
+          {patients.map(p=>(
+            <button key={p} className="pill" onClick={()=>setPatientFilter(p)} style={{padding:"5px 12px",borderRadius:20,border:`1px solid ${patientFilter===p?"rgba(249,168,212,0.5)":"rgba(255,255,255,0.05)"}`,background:patientFilter===p?"rgba(249,168,212,0.12)":"transparent",color:patientFilter===p?"#f9a8d4":"rgba(100,116,139,0.6)",fontSize:11,fontWeight:600,fontFamily:"'Outfit',sans-serif",cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>👤 {p}</button>
+          ))}
+        </div>
+      )}
+
+      {/* Category filter */}
       <div className="fu2" style={{display:"flex",gap:5,overflowX:"auto",marginBottom:16,scrollbarWidth:"none",paddingBottom:4}}>
         {["All",...CATEGORIES].map(c=>(
           <button key={c} className="pill" onClick={()=>setCat(c)} style={{padding:"5px 12px",borderRadius:20,border:`1px solid ${cat===c?"rgba(255,255,255,0.2)":"rgba(255,255,255,0.05)"}`,background:cat===c?"rgba(255,255,255,0.08)":"transparent",color:cat===c?"#e2e8f0":"rgba(100,116,139,0.6)",fontSize:11,fontWeight:600,fontFamily:"'Outfit',sans-serif",cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>{c}</button>
         ))}
       </div>
+
       <div className="fu3" style={{display:"flex",gap:8,marginBottom:16}}>
         {[[fmt(total),"Total","rgba(56,189,248,0.08)","rgba(56,189,248,0.18)","#38bdf8"],[fmt(reimb),"Reimbursed","rgba(52,211,153,0.08)","rgba(52,211,153,0.18)","#34d399"],[fmt(total-reimb),"Pending","rgba(251,191,36,0.07)","rgba(251,191,36,0.18)","#fbbf24"]].map(([val,label,bg,border,color])=>(
           <div key={label} style={{flex:1,background:bg,border:`1px solid ${border}`,borderRadius:12,padding:"10px",textAlign:"center"}}>
@@ -1276,8 +1337,10 @@ function Summary({expenses}) {
 /* ── Export Page ─────────────────────────────────────────────────────────── */
 function Export({expenses}) {
   const allYears=[...new Set(expenses.map(e=>new Date(e.date+"T00:00:00").getFullYear()))].sort((a,b)=>b-a);
-  const [yearFrom,setYearFrom]=useState(allYears[allYears.length-1]||CY);
-  const [yearTo,setYearTo]=useState(allYears[0]||CY);
+  const minYear=allYears[allYears.length-1]||CY;
+  const maxYear=allYears[0]||CY;
+  const [yearFrom,setYearFrom]=useState(minYear);
+  const [yearTo,setYearTo]=useState(maxYear);
   const [status,setStatus]=useState("all");
   const [done,setDone]=useState(false);
 
@@ -1291,12 +1354,17 @@ function Export({expenses}) {
   const pending=total-reimb;
 
   const downloadCSV=()=>{
-    const headers=["Date","Provider","Category","Expense Type","Amount","Payment Type","Reimbursed","Notes","Receipt"];
+    const headers=["Date","Patient","Provider","Category","Expense Type","Amount","Payment Type","Reimbursed","Notes","Receipt File"];
     const rows=filtered.map(e=>[
-      e.date, `"${(e.provider||"").replace(/"/g,'""')}"`,
-      `"${e.category}"`, `"${(e.subcategory||"").replace(/"/g,'""')}"`,
-      (parseFloat(e.amount)||0).toFixed(2), `"${e.paymentType}"`,
-      e.reimbursed?"Yes":"No", `"${(e.notes||"").replace(/"/g,'""')}"`,
+      e.date,
+      `"${(e.patient||"").replace(/"/g,'""')}"`,
+      `"${(e.provider||"").replace(/"/g,'""')}"`,
+      `"${e.category}"`,
+      `"${(e.subcategory||"").replace(/"/g,'""')}"`,
+      (parseFloat(e.amount)||0).toFixed(2),
+      `"${e.paymentType}"`,
+      e.reimbursed?"Yes":"No",
+      `"${(e.notes||"").replace(/"/g,'""')}"`,
       `"${e.fileName||""}"`,
     ]);
     const csv=[headers.join(","),...rows.map(r=>r.join(","))].join("\n");
@@ -1352,9 +1420,10 @@ ${Object.entries(byYear).sort((a,b)=>b[0]-a[0]).map(([yr,exps])=>{
   const yrReim=exps.filter(e=>e.reimbursed).reduce((s,e)=>s+(parseFloat(e.amount)||0),0);
   return `<h2>${yr}</h2>
 <div class="yr-total">${exps.length} expense${exps.length!==1?"s":"s"} · Total: <strong>$${yrTotal.toFixed(2)}</strong> · Reimbursed: <strong>$${yrReim.toFixed(2)}</strong> · Pending: <strong>$${(yrTotal-yrReim).toFixed(2)}</strong></div>
-<table><thead><tr><th>Date</th><th>Provider</th><th>Category</th><th>Amount</th><th>Payment</th><th>Status</th><th>Receipt</th></tr></thead><tbody>
+<table><thead><tr><th>Date</th><th>Patient</th><th>Provider</th><th>Category</th><th>Amount</th><th>Payment</th><th>Status</th><th>Receipt</th></tr></thead><tbody>
 ${exps.map(e=>`<tr>
   <td>${fmtDate(e.date)}</td>
+  <td>${e.patient||"—"}</td>
   <td><strong>${e.provider||""}</strong>${e.subcategory?`<br><span style="font-size:11px;color:#64748b">${e.subcategory}</span>`:""}${e.notes?`<br><span style="font-size:11px;color:#94a3b8">${e.notes}</span>`:""}  </td>
   <td>${e.category}</td>
   <td><strong>$${(parseFloat(e.amount)||0).toFixed(2)}</strong></td>
@@ -1463,8 +1532,10 @@ ${exps.map(e=>`<tr>
         </button>
       </div>
 
-      <div style={{marginTop:16,background:"rgba(56,189,248,0.05)",border:"1px solid rgba(56,189,248,0.12)",borderRadius:14,padding:"13px 15px",fontSize:12,color:"rgba(100,116,139,0.75)",lineHeight:1.7}}>
-        <span style={{color:"#38bdf8",fontWeight:600}}>💡 For HSA claims:</span> Download the report, then open it in your browser and use Print → Save as PDF to create a clean PDF. Attach original receipts to each expense. Keep copies indefinitely — there is no statute of limitations on HSA self-reimbursements.
+      <div style={{marginTop:16,background:"rgba(56,189,248,0.05)",border:"1px solid rgba(56,189,248,0.12)",borderRadius:14,padding:"13px 15px",fontSize:12,color:"rgba(100,116,139,0.75)",lineHeight:1.8}}>
+        <div style={{marginBottom:8}}><span style={{color:"#38bdf8",fontWeight:600}}>💡 For HSA claims:</span> Download the report, open it in your browser, and use Print → Save as PDF for a clean PDF to submit with your claim.</div>
+        <div style={{marginBottom:8}}><span style={{color:"#fbbf24",fontWeight:600}}>📎 Receipt backup:</span> Your actual receipt files are stored securely in HSA Vault's cloud. To back them up yourself, open each expense, tap the receipt filename, and save it to your device or Google Drive. We recommend keeping a personal backup folder organized by year.</div>
+        <div><span style={{color:"#34d399",fontWeight:600}}>⏳ No time limit:</span> Keep copies indefinitely — there is no statute of limitations on HSA self-reimbursements as long as expenses occurred after your HSA opened.</div>
       </div>
     </div>
   );
@@ -1573,4 +1644,3 @@ export default function App({ user }) {
     </div>
   );
 }
-
