@@ -1079,17 +1079,11 @@ function History({expenses,onDelete,onToggle,onEdit}) {
       {/* Sort */}
       <div className="fu2" style={{display:"flex",gap:6,marginBottom:10,alignItems:"center"}}>
         <span style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(100,116,139,0.4)",flexShrink:0}}>Sort</span>
-        {/* Date toggle */}
         <button className="pill" onClick={()=>setSort(s=>s==="date-new"?"date-old":"date-new")} style={{padding:"5px 12px",borderRadius:20,border:`1px solid ${sort.startsWith("date")?"rgba(139,92,246,0.5)":"rgba(255,255,255,0.05)"}`,background:sort.startsWith("date")?"rgba(139,92,246,0.12)":"transparent",color:sort.startsWith("date")?"#c084fc":"rgba(100,116,139,0.6)",fontSize:11,fontWeight:600,fontFamily:"'Outfit',sans-serif",cursor:"pointer",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:4}}>
           Date {sort==="date-new"?"↓":sort==="date-old"?"↑":"↓"}
         </button>
-        {/* Amount toggle */}
         <button className="pill" onClick={()=>setSort(s=>s==="amount-high"?"amount-low":"amount-high")} style={{padding:"5px 12px",borderRadius:20,border:`1px solid ${sort.startsWith("amount")?"rgba(139,92,246,0.5)":"rgba(255,255,255,0.05)"}`,background:sort.startsWith("amount")?"rgba(139,92,246,0.12)":"transparent",color:sort.startsWith("amount")?"#c084fc":"rgba(100,116,139,0.6)",fontSize:11,fontWeight:600,fontFamily:"'Outfit',sans-serif",cursor:"pointer",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:4}}>
           $ {sort==="amount-high"?"↓":sort==="amount-low"?"↑":"↓"}
-        </button>
-        {/* Patient A-Z toggle */}
-        <button className="pill" onClick={()=>setSort(s=>s==="patient"?"patient-z":"patient")} style={{padding:"5px 12px",borderRadius:20,border:`1px solid ${sort.startsWith("patient")?"rgba(139,92,246,0.5)":"rgba(255,255,255,0.05)"}`,background:sort.startsWith("patient")?"rgba(139,92,246,0.12)":"transparent",color:sort.startsWith("patient")?"#c084fc":"rgba(100,116,139,0.6)",fontSize:11,fontWeight:600,fontFamily:"'Outfit',sans-serif",cursor:"pointer",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:4}}>
-          Name {sort==="patient"?"A→Z":sort==="patient-z"?"Z→A":"A→Z"}
         </button>
       </div>
 
