@@ -761,11 +761,12 @@ function YearTabs({year,setYear}) {
 }
 
 /* ── Shared form for Add + Edit ──────────────────────────────────────────── */
-function ExpenseForm({initial, onSave, onClose, title, subtitle, saveLabel}) {
+function ExpenseForm({initial, onSave, onClose, title, subtitle, saveLabel, knownPatients=[]}) {
   const [form,setForm]=useState(initial);
   const [saving,setSaving]=useState(false);
   const [catOpen,setCatOpen]=useState(false);
   const [subOpen,setSubOpen]=useState(false);
+  const [patientFocus,setPatientFocus]=useState(false);
   const fileRef=useRef();
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
   const subItems=ELIGIBLE[form.category]||[];
@@ -776,6 +777,12 @@ function ExpenseForm({initial, onSave, onClose, title, subtitle, saveLabel}) {
     await new Promise(r=>setTimeout(r,350));
     onSave({...form,amount:parseFloat(form.amount)});
   };
+
+  // Autocomplete suggestions — filter known names by what's typed
+  const patientSuggestions=knownPatients.filter(p=>
+    p.toLowerCase().includes((form.patient||"").toLowerCase()) && p!==(form.patient||"")
+  );
+
   const inp={width:"100%",background:"rgba(15,23,42,0.6)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:12,color:"#e2e8f0",fontSize:14,padding:"12px 14px",outline:"none",fontFamily:"'Outfit',sans-serif",boxSizing:"border-box",marginBottom:14};
   const lbl={fontSize:10,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",color:"rgba(100,116,139,0.8)",marginBottom:6,display:"block"};
   return (
@@ -793,8 +800,34 @@ function ExpenseForm({initial, onSave, onClose, title, subtitle, saveLabel}) {
         <label style={lbl}>Date of Expense *</label>
         <input style={inp} type="date" value={form.date} onChange={e=>set("date",e.target.value)}/>
 
+        {/* For field with autocomplete */}
         <label style={lbl}>For *</label>
-        <input style={inp} type="text" placeholder="e.g. John, Sarah…" value={form.patient||""} onChange={e=>set("patient",e.target.value)}/>
+        <div style={{position:"relative",marginBottom:14}}>
+          <input style={{...inp,marginBottom:0}} type="text" placeholder="e.g. John, Sarah…"
+            value={form.patient||""}
+            onChange={e=>set("patient",e.target.value)}
+            onFocus={()=>setPatientFocus(true)}
+            onBlur={()=>setTimeout(()=>setPatientFocus(false),150)}
+          />
+          {/* Autocomplete dropdown */}
+          {patientFocus && patientSuggestions.length>0 && (
+            <div style={{position:"absolute",top:"100%",left:0,right:0,zIndex:10,background:"rgba(8,12,20,0.98)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"0 0 12px 12px",overflow:"hidden",marginTop:-2}}>
+              {patientSuggestions.map(p=>(
+                <button key={p} onMouseDown={()=>set("patient",p)} style={{width:"100%",background:"transparent",border:"none",borderBottom:"1px solid rgba(255,255,255,0.04)",padding:"10px 14px",cursor:"pointer",display:"flex",alignItems:"center",gap:10,color:"#e2e8f0",fontFamily:"'Outfit',sans-serif",fontSize:14,textAlign:"left",transition:"background 0.15s"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(56,189,248,0.08)"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                  <span style={{fontSize:16}}>👤</span>{p}
+                </button>
+              ))}
+            </div>
+          )}
+          {/* Quick chips for known patients when field is empty */}
+          {patientFocus && !form.patient && knownPatients.length>0 && (
+            <div style={{marginTop:8,display:"flex",gap:6,flexWrap:"wrap"}}>
+              {knownPatients.map(p=>(
+                <button key={p} onMouseDown={()=>set("patient",p)} style={{padding:"4px 12px",borderRadius:20,border:"1px solid rgba(56,189,248,0.25)",background:"rgba(56,189,248,0.08)",color:"#38bdf8",fontSize:12,fontWeight:600,fontFamily:"'Outfit',sans-serif",cursor:"pointer"}}>👤 {p}</button>
+              ))}
+            </div>
+          )}
+        </div>
 
         <label style={lbl}>Provider / Facility *</label>
         <input style={inp} type="text" placeholder="Dr. Smith, CVS Pharmacy…" value={form.provider} onChange={e=>set("provider",e.target.value)}/>
@@ -888,13 +921,13 @@ function ExpenseForm({initial, onSave, onClose, title, subtitle, saveLabel}) {
   );
 }
 
-function AddModal({onClose,onSave}) {
+function AddModal({onClose,onSave,knownPatients}) {
   const blank={date:new Date().toISOString().slice(0,10),amount:"",patient:"",provider:"",category:"Doctor & Hospital",subcategory:"",paymentType:"Credit Card",notes:"",fileName:"",reimbursed:false};
-  return <ExpenseForm initial={blank} onSave={e=>{onSave({...e,id:uid()});}} onClose={onClose} title="Log Expense" subtitle="Add a medical expense to your vault" saveLabel="Save Expense"/>;
+  return <ExpenseForm initial={blank} onSave={e=>{onSave({...e,id:uid()});}} onClose={onClose} title="Log Expense" subtitle="Add a medical expense to your vault" saveLabel="Save Expense" knownPatients={knownPatients}/>;
 }
 
-function EditModal({expense,onClose,onSave}) {
-  return <ExpenseForm initial={{...expense}} onSave={onSave} onClose={onClose} title="Edit Expense" subtitle="Update this expense record" saveLabel="Save Changes"/>;
+function EditModal({expense,onClose,onSave,knownPatients}) {
+  return <ExpenseForm initial={{...expense}} onSave={onSave} onClose={onClose} title="Edit Expense" subtitle="Update this expense record" saveLabel="Save Changes" knownPatients={knownPatients}/>;
 }
 
 /* ── Expense Row with edit + receipt view ─────────────────────────────────── */
@@ -971,16 +1004,38 @@ function ExpRow({expense,onDelete,onToggle,onEdit,delay=0}) {
             {/* Receipt */}
             <div style={{background:expense.fileName?"rgba(56,189,248,0.06)":"rgba(255,255,255,0.03)",border:`1px solid ${expense.fileName?"rgba(56,189,248,0.2)":"rgba(255,255,255,0.06)"}`,borderRadius:12,padding:"14px 16px",marginBottom:20}}>
               <div style={{fontSize:10,color:"rgba(100,116,139,0.6)",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:700,marginBottom:8}}>Receipt / Document</div>
-              {expense.fileName
-                ?<div style={{display:"flex",alignItems:"center",gap:10}}>
-                    <div style={{width:36,height:36,borderRadius:10,background:"rgba(56,189,248,0.12)",border:"1px solid rgba(56,189,248,0.25)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>📎</div>
+              {expense.fileUrl ? (
+                <div>
+                  {/* Image preview */}
+                  {/\.(jpg|jpeg|png|gif|webp|heic)$/i.test(expense.fileName||"") ? (
                     <div>
-                      <div style={{fontSize:13,fontWeight:600,color:"#38bdf8"}}>{expense.fileName}</div>
-                      <div style={{fontSize:11,color:"rgba(100,116,139,0.6)",marginTop:2}}>Attached · tap to view when cloud storage is connected</div>
+                      <img src={expense.fileUrl} alt="Receipt" style={{width:"100%",borderRadius:10,marginBottom:10,maxHeight:300,objectFit:"contain",background:"rgba(0,0,0,0.3)"}} onError={e=>{e.target.style.display="none";}}/>
+                      <a href={expense.fileUrl} target="_blank" rel="noopener noreferrer" style={{display:"flex",alignItems:"center",gap:8,color:"#38bdf8",fontSize:13,fontWeight:600,textDecoration:"none"}}>
+                        <span>↗</span> Open full size
+                      </a>
                     </div>
+                  ) : (
+                    /* PDF or doc — open in new tab */
+                    <a href={expense.fileUrl} target="_blank" rel="noopener noreferrer" style={{display:"flex",alignItems:"center",gap:10,textDecoration:"none"}}>
+                      <div style={{width:36,height:36,borderRadius:10,background:"rgba(56,189,248,0.12)",border:"1px solid rgba(56,189,248,0.25)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>📄</div>
+                      <div>
+                        <div style={{fontSize:13,fontWeight:600,color:"#38bdf8"}}>{expense.fileName}</div>
+                        <div style={{fontSize:11,color:"rgba(100,116,139,0.6)",marginTop:2}}>Tap to open document ↗</div>
+                      </div>
+                    </a>
+                  )}
+                </div>
+              ) : expense.fileName ? (
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{width:36,height:36,borderRadius:10,background:"rgba(56,189,248,0.12)",border:"1px solid rgba(56,189,248,0.25)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>📎</div>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:600,color:"#38bdf8"}}>{expense.fileName}</div>
+                    <div style={{fontSize:11,color:"rgba(100,116,139,0.6)",marginTop:2}}>File logged — re-upload to enable viewing</div>
                   </div>
-                :<div style={{fontSize:13,color:"rgba(100,116,139,0.5)",fontStyle:"italic"}}>No receipt attached — tap Edit to add one</div>
-              }
+                </div>
+              ) : (
+                <div style={{fontSize:13,color:"rgba(100,116,139,0.5)",fontStyle:"italic"}}>No receipt attached — tap Edit to add one</div>
+              )}
             </div>
 
             {/* Action buttons */}
@@ -1546,6 +1601,104 @@ ${exps.map(e=>`<tr>
   );
 }
 
+/* ── App Tutorial ─────────────────────────────────────────────────────────── */
+const TUTORIAL_STEPS = [
+  {
+    id:"add",
+    title:"Start Here — Log an Expense",
+    body:"Tap the + button any time you have a medical expense. Takes 30 seconds. The more you log, the more you can claim tax-free at retirement.",
+    highlight:"bottom-right",
+    arrow:"down",
+    accent:"#38bdf8",
+  },
+  {
+    id:"history",
+    title:"View All Your Expenses",
+    body:"The History tab shows every expense you've logged. Filter by status, sort by date or amount, and search across all your records.",
+    highlight:"nav-history",
+    arrow:"up",
+    accent:"#c084fc",
+  },
+  {
+    id:"eligible",
+    title:"Not Sure What Qualifies?",
+    body:"The Eligible tab has the full IRS Publication 502 list — 90+ qualifying expenses plus common items that don't qualify. Search before you pay.",
+    highlight:"nav-eligible",
+    arrow:"up",
+    accent:"#34d399",
+  },
+  {
+    id:"export",
+    title:"Export When You're Ready to Claim",
+    body:"When you retire and want to reimburse yourself, go to Export. Download a full report organized by year — your proof for the IRS.",
+    highlight:"nav-export",
+    arrow:"up",
+    accent:"#fbbf24",
+  },
+];
+
+function Tutorial({onDone}) {
+  const [step,setStep]=useState(0);
+  const current=TUTORIAL_STEPS[step];
+  const isLast=step===TUTORIAL_STEPS.length-1;
+
+  const arrowStyle={
+    position:"absolute",fontSize:28,
+    ...(current.arrow==="down"?{bottom:-36,left:"50%",transform:"translateX(-50%)"}:{top:-36,left:"50%",transform:"translateX(-50%)"}),
+    color:current.accent,
+    animation:"floatY 1.5s ease-in-out infinite",
+  };
+
+  const boxStyle={
+    position:"fixed",zIndex:500,
+    maxWidth:300,width:"calc(100% - 48px)",
+    background:"linear-gradient(135deg,#0d1829,#080f1e)",
+    border:`1px solid ${current.accent}40`,
+    borderRadius:20,padding:"20px",
+    boxShadow:`0 0 40px ${current.accent}30, 0 20px 60px rgba(0,0,0,0.8)`,
+    transition:"all 0.3s cubic-bezier(0.22,1,0.36,1)",
+    ...(current.highlight==="bottom-right"
+      ? {bottom:150,right:20}
+      : {bottom:90,left:"50%",transform:"translateX(-50%)"}
+    ),
+  };
+
+  return (
+    <>
+      {/* Dim overlay — doesn't block interaction */}
+      <div style={{position:"fixed",inset:0,background:"rgba(2,5,9,0.6)",zIndex:490,pointerEvents:"none"}}/>
+
+      {/* Spotlight on + button */}
+      {current.highlight==="bottom-right"&&(
+        <div style={{position:"fixed",bottom:76,right:12,width:72,height:72,borderRadius:"50%",border:`2px solid ${current.accent}`,boxShadow:`0 0 0 4px ${current.accent}20, 0 0 30px ${current.accent}60`,zIndex:495,pointerEvents:"none",animation:"glowPulse 1.5s ease-in-out infinite"}}/>
+      )}
+
+      {/* Coach mark box */}
+      <div style={boxStyle}>
+        {/* Arrow indicator */}
+        <div style={arrowStyle}>↓</div>
+
+        {/* Step counter */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+          <div style={{display:"flex",gap:5}}>
+            {TUTORIAL_STEPS.map((_,i)=>(
+              <div key={i} style={{width:i===step?18:6,height:6,borderRadius:3,background:i===step?current.accent:"rgba(255,255,255,0.15)",transition:"all 0.3s"}}/>
+            ))}
+          </div>
+          <button onClick={onDone} style={{background:"none",border:"none",color:"rgba(100,116,139,0.5)",fontSize:11,cursor:"pointer",fontFamily:"'Outfit',sans-serif",fontWeight:600}}>Skip tour</button>
+        </div>
+
+        <div style={{fontSize:15,fontWeight:700,color:"#f8fafc",marginBottom:8,fontFamily:"'DM Serif Display',serif"}}>{current.title}</div>
+        <div style={{fontSize:13,color:"rgba(148,163,184,0.85)",lineHeight:1.65,marginBottom:16}}>{current.body}</div>
+
+        <button onClick={()=>{if(isLast){onDone();}else setStep(s=>s+1);}} style={{width:"100%",padding:"12px",border:"none",borderRadius:12,cursor:"pointer",background:`linear-gradient(135deg,${current.accent}cc,${current.accent})`,color:"#fff",fontSize:13,fontWeight:700,fontFamily:"'Outfit',sans-serif",boxShadow:`0 0 16px ${current.accent}40`}}>
+          {isLast?"Got it, let's go! →":"Next →"}
+        </button>
+      </div>
+    </>
+  );
+}
+
 /* ── App ─────────────────────────────────────────────────────────────────── */
 const NAV=[
   {id:"dashboard",label:"Home",   icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h3a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h3a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>},
@@ -1561,7 +1714,11 @@ export default function App({ user }) {
   const [showAdd,setShowAdd]   = useState(false);
   const [editing,setEditing]   = useState(null);
   const [showOnboard,setShowOnboard] = useState(true);
+  const [showTutorial,setShowTutorial] = useState(false); // shows after onboard
   const [fileToUpload,setFileToUpload] = useState(null);
+
+  // Build unique patient list for autocomplete
+  const knownPatients = [...new Set(expenses.map(e=>e.patient).filter(Boolean))].sort();
 
   const handleAdd = async (data, file) => {
     await addExpense(user.uid, data, file);
@@ -1606,7 +1763,7 @@ export default function App({ user }) {
   return (
     <div style={{minHeight:"100vh",fontFamily:"'Outfit',sans-serif",color:"#e2e8f0",position:"relative",paddingBottom:showOnboard?0:90}}>
       <style>{CSS}</style>
-      {showOnboard && <Onboarding onDone={()=>setShowOnboard(false)}/>}
+      {showOnboard && <Onboarding onDone={()=>{setShowOnboard(false);setShowTutorial(true);}}/>}
       {!showOnboard && (
         <>
           <BG/>
@@ -1642,8 +1799,9 @@ export default function App({ user }) {
             })}
           </nav>
 
-          {showAdd  && <AddModal  onClose={()=>setShowAdd(false)} onSave={handleAdd}/>}
-          {editing  && <EditModal expense={editing} onClose={()=>setEditing(null)} onSave={handleEdit}/>}
+          {showAdd  && <AddModal  onClose={()=>setShowAdd(false)}  onSave={handleAdd}  knownPatients={knownPatients}/>}
+          {editing  && <EditModal expense={editing} onClose={()=>setEditing(null)} onSave={handleEdit} knownPatients={knownPatients}/>}
+          {showTutorial && <Tutorial onDone={()=>setShowTutorial(false)}/>}
         </>
       )}
     </div>
