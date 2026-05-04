@@ -1002,35 +1002,35 @@ function ExpRow({expense,onDelete,onToggle,onEdit,delay=0}) {
             )}
 
             {/* Receipt */}
-            <div style={{background:expense.fileName?"rgba(56,189,248,0.06)":"rgba(255,255,255,0.03)",border:`1px solid ${expense.fileName?"rgba(56,189,248,0.2)":"rgba(255,255,255,0.06)"}`,borderRadius:12,padding:"14px 16px",marginBottom:20}}>
-              <div style={{fontSize:10,color:"rgba(100,116,139,0.6)",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:700,marginBottom:8}}>Receipt / Document</div>
+            <div style={{background:expense.fileUrl||expense.fileName?"rgba(56,189,248,0.06)":"rgba(255,255,255,0.03)",border:`1px solid ${expense.fileUrl||expense.fileName?"rgba(56,189,248,0.2)":"rgba(255,255,255,0.06)"}`,borderRadius:12,padding:"14px 16px",marginBottom:20}}>
+              <div style={{fontSize:10,color:"rgba(100,116,139,0.6)",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:700,marginBottom:10}}>Receipt / Document</div>
               {expense.fileUrl ? (
                 <div>
-                  {/* Image preview */}
-                  {/\.(jpg|jpeg|png|gif|webp|heic)$/i.test(expense.fileName||"") ? (
-                    <div>
-                      <img src={expense.fileUrl} alt="Receipt" style={{width:"100%",borderRadius:10,marginBottom:10,maxHeight:300,objectFit:"contain",background:"rgba(0,0,0,0.3)"}} onError={e=>{e.target.style.display="none";}}/>
-                      <a href={expense.fileUrl} target="_blank" rel="noopener noreferrer" style={{display:"flex",alignItems:"center",gap:8,color:"#38bdf8",fontSize:13,fontWeight:600,textDecoration:"none"}}>
-                        <span>↗</span> Open full size
-                      </a>
+                  {/* Primary CTA — always works */}
+                  <button
+                    onClick={()=>window.open(expense.fileUrl,"_blank","noopener,noreferrer")}
+                    style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"13px 14px",background:"linear-gradient(135deg,rgba(56,189,248,0.15),rgba(37,99,235,0.1))",border:"1px solid rgba(56,189,248,0.35)",borderRadius:12,cursor:"pointer",marginBottom:10}}>
+                    <div style={{width:38,height:38,borderRadius:10,background:"rgba(56,189,248,0.2)",border:"1px solid rgba(56,189,248,0.4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>
+                      {/\.(jpg|jpeg|png|gif|webp|heic)$/i.test(expense.fileName||"")?"🖼️":"📄"}
                     </div>
-                  ) : (
-                    /* PDF or doc — open in new tab */
-                    <a href={expense.fileUrl} target="_blank" rel="noopener noreferrer" style={{display:"flex",alignItems:"center",gap:10,textDecoration:"none"}}>
-                      <div style={{width:36,height:36,borderRadius:10,background:"rgba(56,189,248,0.12)",border:"1px solid rgba(56,189,248,0.25)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>📄</div>
-                      <div>
-                        <div style={{fontSize:13,fontWeight:600,color:"#38bdf8"}}>{expense.fileName}</div>
-                        <div style={{fontSize:11,color:"rgba(100,116,139,0.6)",marginTop:2}}>Tap to open document ↗</div>
-                      </div>
-                    </a>
+                    <div style={{flex:1,textAlign:"left"}}>
+                      <div style={{fontSize:13,fontWeight:700,color:"#38bdf8"}}>{expense.fileName||"View Receipt"}</div>
+                      <div style={{fontSize:11,color:"rgba(100,116,139,0.7)",marginTop:2}}>Tap to open ↗</div>
+                    </div>
+                  </button>
+                  {/* Inline image preview bonus */}
+                  {/\.(jpg|jpeg|png|gif|webp)$/i.test(expense.fileName||"")&&(
+                    <img src={expense.fileUrl} alt="Receipt" referrerPolicy="no-referrer"
+                      style={{width:"100%",borderRadius:10,maxHeight:240,objectFit:"contain",background:"rgba(0,0,0,0.3)",display:"block"}}
+                      onError={e=>{e.target.style.display="none";}}/>
                   )}
                 </div>
               ) : expense.fileName ? (
                 <div style={{display:"flex",alignItems:"center",gap:10}}>
-                  <div style={{width:36,height:36,borderRadius:10,background:"rgba(56,189,248,0.12)",border:"1px solid rgba(56,189,248,0.25)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>📎</div>
+                  <div style={{width:36,height:36,borderRadius:10,background:"rgba(251,191,36,0.12)",border:"1px solid rgba(251,191,36,0.25)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>📎</div>
                   <div>
-                    <div style={{fontSize:13,fontWeight:600,color:"#38bdf8"}}>{expense.fileName}</div>
-                    <div style={{fontSize:11,color:"rgba(100,116,139,0.6)",marginTop:2}}>File logged — re-upload to enable viewing</div>
+                    <div style={{fontSize:13,fontWeight:600,color:"#fbbf24"}}>{expense.fileName}</div>
+                    <div style={{fontSize:11,color:"rgba(100,116,139,0.6)",marginTop:2}}>Edit this expense and re-attach to enable viewing</div>
                   </div>
                 </div>
               ) : (
@@ -1092,6 +1092,8 @@ function History({expenses,onDelete,onToggle,onEdit}) {
   const [sort,setSort]=useState("date-new");
   const [patientFilter,setPatientFilter]=useState("All");
 
+  const [receiptFilter,setReceiptFilter]=useState("all"); // all | has | missing
+
   // Build unique patient list
   const patients=["All",...[...new Set(expenses.map(e=>e.patient).filter(Boolean))].sort()];
 
@@ -1100,6 +1102,7 @@ function History({expenses,onDelete,onToggle,onEdit}) {
     .filter(e=>cat==="All"||e.category===cat)
     .filter(e=>status==="All"||(status==="Pending"?!e.reimbursed:e.reimbursed))
     .filter(e=>patientFilter==="All"||e.patient===patientFilter)
+    .filter(e=>receiptFilter==="all"?true:receiptFilter==="has"?!!e.fileUrl:!e.fileUrl)
     .filter(e=>!search||e.provider?.toLowerCase().includes(search.toLowerCase())||e.notes?.toLowerCase().includes(search.toLowerCase())||e.subcategory?.toLowerCase().includes(search.toLowerCase())||String(e.amount||"").includes(search))
     .sort((a,b)=>{
       if(sort==="date-new") return b.date.localeCompare(a.date);
@@ -1142,7 +1145,19 @@ function History({expenses,onDelete,onToggle,onEdit}) {
         </button>
       </div>
 
-      {/* Patient filter — only show if multiple patients */}
+      {/* Receipt filter */}
+      <div className="fu2" style={{display:"flex",gap:6,marginBottom:10,alignItems:"center"}}>
+        <span style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(100,116,139,0.4)",flexShrink:0}}>Receipt</span>
+        {[["all","All"],["has","✓ Has Receipt"],["missing","⚠ Missing"]].map(([v,l])=>(
+          <button key={v} className="pill" onClick={()=>setReceiptFilter(v)} style={{
+            padding:"5px 12px",borderRadius:20,fontSize:11,fontWeight:600,
+            fontFamily:"'Outfit',sans-serif",cursor:"pointer",whiteSpace:"nowrap",border:"none",
+            background:receiptFilter===v?(v==="missing"?"rgba(251,191,36,0.15)":v==="has"?"rgba(52,211,153,0.15)":"rgba(255,255,255,0.08)"):"transparent",
+            color:receiptFilter===v?(v==="missing"?"#fbbf24":v==="has"?"#34d399":"#e2e8f0"):"rgba(100,116,139,0.6)",
+            outline:`1px solid ${receiptFilter===v?(v==="missing"?"rgba(251,191,36,0.4)":v==="has"?"rgba(52,211,153,0.4)":"rgba(255,255,255,0.15)"):"transparent"}`,
+          }}>{l}</button>
+        ))}
+      </div>
       {patients.length>2&&(
         <div className="fu2" style={{display:"flex",gap:5,overflowX:"auto",marginBottom:10,scrollbarWidth:"none",paddingBottom:2}}>
           {patients.map(p=>(
@@ -1602,97 +1617,118 @@ ${exps.map(e=>`<tr>
 }
 
 /* ── App Tutorial ─────────────────────────────────────────────────────────── */
+// NAV has 5 items: Home(0) History(1) Eligible(2) Export(3) — after removing Summary
+// Each tab center = (index + 0.5) / 4 * 100vw
+// Tab centers (approx): Home=10%, History=35%, Eligible=60%, Export=85%
+// + button is fixed bottom:84px right:20px center = right:48px from right edge
+
 const TUTORIAL_STEPS = [
   {
     id:"add",
-    title:"Start Here — Log an Expense",
-    body:"Tap the + button any time you have a medical expense. Takes 30 seconds. The more you log, the more you can claim tax-free at retirement.",
-    highlight:"bottom-right",
-    arrow:"down",
+    title:"Log Your First Expense",
+    body:"Tap the blue + button any time you have a medical expense. It takes 30 seconds. Every receipt you log is a tax-free dollar waiting at retirement.",
     accent:"#38bdf8",
+    // Box sits above + button, arrow points down-right toward it
+    box:{ bottom:158, right:16 },
+    arrowStyle:{ position:"absolute", bottom:-32, right:10, fontSize:26, transform:"rotate(20deg)" },
   },
   {
     id:"history",
-    title:"View All Your Expenses",
-    body:"The History tab shows every expense you've logged. Filter by status, sort by date or amount, and search across all your records.",
-    highlight:"nav-history",
-    arrow:"up",
+    title:"History Tab",
+    body:"See every expense you've logged. Filter by status, sort by date or amount, search, and check which ones still need a receipt attached.",
     accent:"#c084fc",
+    // Box sits above nav, centered over History tab (2nd of 4 = ~37.5% from left)
+    box:{ bottom:90, left:"calc(25% - 130px)" },
+    arrowStyle:{ position:"absolute", bottom:-28, left:42, fontSize:26 },
   },
   {
     id:"eligible",
-    title:"Not Sure What Qualifies?",
-    body:"The Eligible tab has the full IRS Publication 502 list — 90+ qualifying expenses plus common items that don't qualify. Search before you pay.",
-    highlight:"nav-eligible",
-    arrow:"up",
+    title:"Eligible Tab",
+    body:"Not sure if something qualifies? The full IRS Publication 502 list is here — 90+ eligible expenses and 40+ common items that don't qualify.",
     accent:"#34d399",
+    // Box above nav, centered over Eligible tab (3rd of 4 = ~62.5% from left)
+    box:{ bottom:90, left:"calc(50% - 150px)" },
+    arrowStyle:{ position:"absolute", bottom:-28, left:"calc(50% - 10px)", fontSize:26 },
   },
   {
     id:"export",
-    title:"Export When You're Ready to Claim",
-    body:"When you retire and want to reimburse yourself, go to Export. Download a full report organized by year — your proof for the IRS.",
-    highlight:"nav-export",
-    arrow:"up",
+    title:"Export Tab",
+    body:"When you're ready to claim from your HSA, export a full report organized by year. This is your proof for the IRS — keep it forever.",
     accent:"#fbbf24",
+    // Box above nav, centered over Export tab (4th of 4 = ~87.5% from left)
+    box:{ bottom:90, right:16 },
+    arrowStyle:{ position:"absolute", bottom:-28, right:20, fontSize:26 },
   },
 ];
 
 function Tutorial({onDone}) {
   const [step,setStep]=useState(0);
-  const current=TUTORIAL_STEPS[step];
+  const s=TUTORIAL_STEPS[step];
   const isLast=step===TUTORIAL_STEPS.length-1;
-
-  const arrowStyle={
-    position:"absolute",fontSize:28,
-    ...(current.arrow==="down"?{bottom:-36,left:"50%",transform:"translateX(-50%)"}:{top:-36,left:"50%",transform:"translateX(-50%)"}),
-    color:current.accent,
-    animation:"floatY 1.5s ease-in-out infinite",
-  };
-
-  const boxStyle={
-    position:"fixed",zIndex:500,
-    maxWidth:300,width:"calc(100% - 48px)",
-    background:"linear-gradient(135deg,#0d1829,#080f1e)",
-    border:`1px solid ${current.accent}40`,
-    borderRadius:20,padding:"20px",
-    boxShadow:`0 0 40px ${current.accent}30, 0 20px 60px rgba(0,0,0,0.8)`,
-    transition:"all 0.3s cubic-bezier(0.22,1,0.36,1)",
-    ...(current.highlight==="bottom-right"
-      ? {bottom:150,right:20}
-      : {bottom:90,left:"50%",transform:"translateX(-50%)"}
-    ),
-  };
 
   return (
     <>
-      {/* Dim overlay — doesn't block interaction */}
-      <div style={{position:"fixed",inset:0,background:"rgba(2,5,9,0.6)",zIndex:490,pointerEvents:"none"}}/>
+      {/* Dimmed overlay — non-blocking */}
+      <div style={{position:"fixed",inset:0,background:"rgba(2,5,9,0.65)",zIndex:490,pointerEvents:"none"}}/>
 
-      {/* Spotlight on + button */}
-      {current.highlight==="bottom-right"&&(
-        <div style={{position:"fixed",bottom:76,right:12,width:72,height:72,borderRadius:"50%",border:`2px solid ${current.accent}`,boxShadow:`0 0 0 4px ${current.accent}20, 0 0 30px ${current.accent}60`,zIndex:495,pointerEvents:"none",animation:"glowPulse 1.5s ease-in-out infinite"}}/>
+      {/* Spotlight ring on + button for step 0 */}
+      {step===0&&(
+        <div style={{position:"fixed",bottom:78,right:14,width:68,height:68,borderRadius:"50%",
+          border:`2.5px solid ${s.accent}`,
+          boxShadow:`0 0 0 6px ${s.accent}18, 0 0 32px ${s.accent}70`,
+          zIndex:495,pointerEvents:"none",animation:"glowPulse 1.2s ease-in-out infinite"}}/>
+      )}
+
+      {/* Spotlight ring on active nav tab for steps 1-3 */}
+      {step>0&&(
+        <div style={{
+          position:"fixed", bottom:8, zIndex:495, pointerEvents:"none",
+          width:56, height:52, borderRadius:12,
+          border:`2px solid ${s.accent}`,
+          boxShadow:`0 0 0 4px ${s.accent}18, 0 0 20px ${s.accent}60`,
+          animation:"glowPulse 1.2s ease-in-out infinite",
+          // Position over exact tab: History=1, Eligible=2, Export=3 (of 4 tabs, 0-indexed)
+          // Each tab width = 25vw, center offset = (index+0.5)*25vw - 28px
+          left:`calc(${[25,50,75][step-1]}% - 28px)`,
+        }}/>
       )}
 
       {/* Coach mark box */}
-      <div style={boxStyle}>
-        {/* Arrow indicator */}
-        <div style={arrowStyle}>↓</div>
+      <div style={{
+        position:"fixed", zIndex:500,
+        width:280,
+        background:"linear-gradient(135deg,#0d1829,#080f1e)",
+        border:`1.5px solid ${s.accent}50`,
+        borderRadius:20, padding:"18px 18px 16px",
+        boxShadow:`0 0 40px ${s.accent}28, 0 24px 60px rgba(0,0,0,0.85)`,
+        ...s.box,
+      }}>
+        {/* Arrow pointing to target */}
+        <div style={{...s.arrowStyle, color:s.accent, animation:"floatY 1.2s ease-in-out infinite"}}>↓</div>
 
-        {/* Step counter */}
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+        {/* Dots + skip */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
           <div style={{display:"flex",gap:5}}>
             {TUTORIAL_STEPS.map((_,i)=>(
-              <div key={i} style={{width:i===step?18:6,height:6,borderRadius:3,background:i===step?current.accent:"rgba(255,255,255,0.15)",transition:"all 0.3s"}}/>
+              <div key={i} style={{width:i===step?16:5,height:5,borderRadius:3,
+                background:i===step?s.accent:"rgba(255,255,255,0.15)",transition:"all 0.3s"}}/>
             ))}
           </div>
-          <button onClick={onDone} style={{background:"none",border:"none",color:"rgba(100,116,139,0.5)",fontSize:11,cursor:"pointer",fontFamily:"'Outfit',sans-serif",fontWeight:600}}>Skip tour</button>
+          <button onClick={onDone} style={{background:"none",border:"none",
+            color:"rgba(100,116,139,0.5)",fontSize:11,cursor:"pointer",
+            fontFamily:"'Outfit',sans-serif",fontWeight:600,letterSpacing:"0.04em"}}>Skip</button>
         </div>
 
-        <div style={{fontSize:15,fontWeight:700,color:"#f8fafc",marginBottom:8,fontFamily:"'DM Serif Display',serif"}}>{current.title}</div>
-        <div style={{fontSize:13,color:"rgba(148,163,184,0.85)",lineHeight:1.65,marginBottom:16}}>{current.body}</div>
+        <div style={{fontFamily:"'DM Serif Display',serif",fontSize:16,color:"#f8fafc",marginBottom:6}}>{s.title}</div>
+        <div style={{fontSize:12,color:"rgba(148,163,184,0.85)",lineHeight:1.65,marginBottom:14}}>{s.body}</div>
 
-        <button onClick={()=>{if(isLast){onDone();}else setStep(s=>s+1);}} style={{width:"100%",padding:"12px",border:"none",borderRadius:12,cursor:"pointer",background:`linear-gradient(135deg,${current.accent}cc,${current.accent})`,color:"#fff",fontSize:13,fontWeight:700,fontFamily:"'Outfit',sans-serif",boxShadow:`0 0 16px ${current.accent}40`}}>
-          {isLast?"Got it, let's go! →":"Next →"}
+        <button onClick={()=>isLast?onDone():setStep(n=>n+1)} style={{
+          width:"100%",padding:"11px",border:"none",borderRadius:12,cursor:"pointer",
+          background:`linear-gradient(135deg,${s.accent}cc,${s.accent})`,
+          color:"#fff",fontSize:13,fontWeight:700,fontFamily:"'Outfit',sans-serif",
+          boxShadow:`0 0 14px ${s.accent}40`,
+        }}>
+          {isLast?"Got it →":"Next →"}
         </button>
       </div>
     </>
@@ -1700,12 +1736,12 @@ function Tutorial({onDone}) {
 }
 
 /* ── App ─────────────────────────────────────────────────────────────────── */
+// Summary removed — year-by-year view folded into Dashboard
 const NAV=[
-  {id:"dashboard",label:"Home",   icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h3a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h3a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>},
-  {id:"history",  label:"History",icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd"/></svg>},
-  {id:"eligible", label:"Eligible",icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/></svg>},
-  {id:"summary",  label:"Summary",icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zm6-4a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zm6-3a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/></svg>},
-  {id:"export",   label:"Export",  icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd"/></svg>},
+  {id:"dashboard",label:"Home",    icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h3a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h3a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>},
+  {id:"history",  label:"History", icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd"/></svg>},
+  {id:"eligible", label:"Eligible", icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/></svg>},
+  {id:"export",   label:"Export",   icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd"/></svg>},
 ];
 
 export default function App({ user }) {
@@ -1781,7 +1817,6 @@ export default function App({ user }) {
             {page==="dashboard" && <Dashboard expenses={expenses} setPage={setPage} onToggle={e=>handleToggle(e)} onDelete={handleDelete} onEdit={setEditing}/>}
             {page==="history"   && <History   expenses={expenses} onDelete={handleDelete} onToggle={e=>handleToggle(e)} onEdit={setEditing}/>}
             {page==="eligible"  && <Eligible/>}
-            {page==="summary"   && <Summary   expenses={expenses}/>}
             {page==="export"    && <Export    expenses={expenses}/>}
           </div>
 

@@ -28,14 +28,15 @@ export function useExpenses(userId) {
 
   // Upload receipt file to Firebase Storage, return download URL
   const uploadReceipt = async (userId, file) => {
-    if (!file) return { fileName: '', fileUrl: '' };
+    if (!file) return { fileName: '', fileUrl: '', storagePath: '' };
     const path = `receipts/${userId}/${Date.now()}_${file.name}`;
     const storageRef = ref(storage, path);
-    const snap = await new Promise((resolve, reject) => {
+    await new Promise((resolve, reject) => {
       const task = uploadBytesResumable(storageRef, file);
-      task.on('state_changed', null, reject, () => resolve(task.snapshot));
+      task.on('state_changed', null, reject, resolve);
     });
-    const fileUrl = await getDownloadURL(snap.ref);
+    // Get a long-lived download URL (public read via Firebase rules)
+    const fileUrl = await getDownloadURL(ref(storage, path));
     return { fileName: file.name, fileUrl, storagePath: path };
   };
 
