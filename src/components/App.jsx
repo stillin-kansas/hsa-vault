@@ -1008,7 +1008,7 @@ function ExpRow({expense,onDelete,onToggle,onEdit,delay=0}) {
                 <div>
                   {/* Primary CTA — always works */}
                   <button
-                    onClick={()=>window.open(expense.fileUrl,"_blank","noopener,noreferrer")}
+                    onClick={(e)=>{e.stopPropagation();window.open(expense.fileUrl,"_blank","noopener,noreferrer");}}
                     style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"13px 14px",background:"linear-gradient(135deg,rgba(56,189,248,0.15),rgba(37,99,235,0.1))",border:"1px solid rgba(56,189,248,0.35)",borderRadius:12,cursor:"pointer",marginBottom:10}}>
                     <div style={{width:38,height:38,borderRadius:10,background:"rgba(56,189,248,0.2)",border:"1px solid rgba(56,189,248,0.4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>
                       {/\.(jpg|jpeg|png|gif|webp|heic)$/i.test(expense.fileName||"")?"🖼️":"📄"}
@@ -1617,96 +1617,96 @@ ${exps.map(e=>`<tr>
 }
 
 /* ── App Tutorial ─────────────────────────────────────────────────────────── */
-// NAV has 5 items: Home(0) History(1) Eligible(2) Export(3) — after removing Summary
-// Each tab center = (index + 0.5) / 4 * 100vw
-// Tab centers (approx): Home=10%, History=35%, Eligible=60%, Export=85%
-// + button is fixed bottom:84px right:20px center = right:48px from right edge
-
 const TUTORIAL_STEPS = [
-  {
-    id:"add",
-    title:"Log Your First Expense",
-    body:"Tap the blue + button any time you have a medical expense. It takes 30 seconds. Every receipt you log is a tax-free dollar waiting at retirement.",
-    accent:"#38bdf8",
-    // Box sits above + button, arrow points down-right toward it
-    box:{ bottom:158, right:16 },
-    arrowStyle:{ position:"absolute", bottom:-32, right:10, fontSize:26, transform:"rotate(20deg)" },
-  },
-  {
-    id:"history",
-    title:"History Tab",
-    body:"See every expense you've logged. Filter by status, sort by date or amount, search, and check which ones still need a receipt attached.",
-    accent:"#c084fc",
-    // Box sits above nav, centered over History tab (2nd of 4 = ~37.5% from left)
-    box:{ bottom:90, left:"calc(25% - 130px)" },
-    arrowStyle:{ position:"absolute", bottom:-28, left:42, fontSize:26 },
-  },
-  {
-    id:"eligible",
-    title:"Eligible Tab",
-    body:"Not sure if something qualifies? The full IRS Publication 502 list is here — 90+ eligible expenses and 40+ common items that don't qualify.",
-    accent:"#34d399",
-    // Box above nav, centered over Eligible tab (3rd of 4 = ~62.5% from left)
-    box:{ bottom:90, left:"calc(50% - 150px)" },
-    arrowStyle:{ position:"absolute", bottom:-28, left:"calc(50% - 10px)", fontSize:26 },
-  },
-  {
-    id:"export",
-    title:"Export Tab",
-    body:"When you're ready to claim from your HSA, export a full report organized by year. This is your proof for the IRS — keep it forever.",
-    accent:"#fbbf24",
-    // Box above nav, centered over Export tab (4th of 4 = ~87.5% from left)
-    box:{ bottom:90, right:16 },
-    arrowStyle:{ position:"absolute", bottom:-28, right:20, fontSize:26 },
-  },
+  { id:"add",      title:"Log Your First Expense",   body:"Tap the blue + button any time you have a medical expense. 30 seconds. Every receipt logged is a tax-free dollar waiting at retirement.", accent:"#38bdf8" },
+  { id:"history",  title:"History Tab",               body:"See every expense logged. Filter by status, sort by date or amount, and instantly find expenses missing receipts.", accent:"#c084fc" },
+  { id:"eligible", title:"Eligible Tab",              body:"Not sure if something qualifies? Search the full IRS Publication 502 list — 90+ eligible expenses and 40+ that don't qualify.", accent:"#34d399" },
+  { id:"export",   title:"Export Tab",                body:"When ready to claim from your HSA, export a full report organized by year. Your proof for the IRS — keep it forever.", accent:"#fbbf24" },
 ];
 
-function Tutorial({onDone}) {
-  const [step,setStep]=useState(0);
-  const s=TUTORIAL_STEPS[step];
-  const isLast=step===TUTORIAL_STEPS.length-1;
+function Tutorial({onDone, fabRef, navRefs}) {
+  const [step, setStep] = useState(0);
+  const [targetRect, setTargetRect] = useState(null);
+  const s = TUTORIAL_STEPS[step];
+  const isLast = step === TUTORIAL_STEPS.length - 1;
+
+  // Measure real DOM position of target on each step change and on resize
+  useEffect(() => {
+    const measure = () => {
+      const el = step === 0 ? fabRef?.current : navRefs?.[step - 1]?.current;
+      if (el) {
+        const r = el.getBoundingClientRect();
+        setTargetRect({ cx: r.left + r.width / 2, top: r.top, bottom: r.bottom, left: r.left, width: r.width, height: r.height });
+      }
+    };
+    // Small delay to ensure DOM has painted
+    const t = setTimeout(measure, 60);
+    window.addEventListener('resize', measure);
+    return () => { clearTimeout(t); window.removeEventListener('resize', measure); };
+  }, [step, fabRef, navRefs]);
+
+  if (!targetRect) return null;
+
+  const BOX_W = 272;
+  const PAD = 12;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  // Clamp box horizontally so it never goes off screen
+  const rawLeft = targetRect.cx - BOX_W / 2;
+  const boxLeft = Math.max(PAD, Math.min(vw - BOX_W - PAD, rawLeft));
+  // Arrow x position relative to box — points exactly at target center
+  const arrowLeft = Math.max(16, Math.min(BOX_W - 24, targetRect.cx - boxLeft));
+  // Box sits above target with 18px gap
+  const boxBottom = vh - targetRect.top + 18;
 
   return (
     <>
-      {/* Dimmed overlay — non-blocking */}
+      {/* Dim overlay — non-interactive */}
       <div style={{position:"fixed",inset:0,background:"rgba(2,5,9,0.65)",zIndex:490,pointerEvents:"none"}}/>
 
-      {/* Spotlight ring on + button for step 0 */}
-      {step===0&&(
-        <div style={{position:"fixed",bottom:78,right:14,width:68,height:68,borderRadius:"50%",
-          border:`2.5px solid ${s.accent}`,
-          boxShadow:`0 0 0 6px ${s.accent}18, 0 0 32px ${s.accent}70`,
-          zIndex:495,pointerEvents:"none",animation:"glowPulse 1.2s ease-in-out infinite"}}/>
-      )}
-
-      {/* Spotlight ring on active nav tab for steps 1-3 */}
-      {step>0&&(
-        <div style={{
-          position:"fixed", bottom:8, zIndex:495, pointerEvents:"none",
-          width:56, height:52, borderRadius:12,
-          border:`2px solid ${s.accent}`,
-          boxShadow:`0 0 0 4px ${s.accent}18, 0 0 20px ${s.accent}60`,
-          animation:"glowPulse 1.2s ease-in-out infinite",
-          // Position over exact tab: History=1, Eligible=2, Export=3 (of 4 tabs, 0-indexed)
-          // Each tab width = 25vw, center offset = (index+0.5)*25vw - 28px
-          left:`calc(${[25,50,75][step-1]}% - 28px)`,
-        }}/>
-      )}
+      {/* Spotlight ring — measured exactly over the real element */}
+      <div style={{
+        position:"fixed",
+        left: targetRect.left - 5,
+        top: targetRect.top - 5,
+        width: targetRect.width + 10,
+        height: targetRect.height + 10,
+        borderRadius: step === 0 ? "50%" : 16,
+        border: `2.5px solid ${s.accent}`,
+        boxShadow: `0 0 0 5px ${s.accent}20, 0 0 28px ${s.accent}80`,
+        zIndex: 495, pointerEvents:"none",
+        animation:"glowPulse 1.2s ease-in-out infinite",
+        transition:"all 0.35s cubic-bezier(0.22,1,0.36,1)",
+      }}/>
 
       {/* Coach mark box */}
       <div style={{
-        position:"fixed", zIndex:500,
-        width:280,
+        position:"fixed",
+        left: boxLeft,
+        bottom: boxBottom,
+        width: BOX_W,
+        zIndex: 500,
         background:"linear-gradient(135deg,#0d1829,#080f1e)",
         border:`1.5px solid ${s.accent}50`,
-        borderRadius:20, padding:"18px 18px 16px",
-        boxShadow:`0 0 40px ${s.accent}28, 0 24px 60px rgba(0,0,0,0.85)`,
-        ...s.box,
+        borderRadius:20,
+        padding:"16px 16px 14px",
+        boxShadow:`0 0 32px ${s.accent}30, 0 20px 60px rgba(0,0,0,0.9)`,
+        transition:"all 0.35s cubic-bezier(0.22,1,0.36,1)",
       }}>
-        {/* Arrow pointing to target */}
-        <div style={{...s.arrowStyle, color:s.accent, animation:"floatY 1.2s ease-in-out infinite"}}>↓</div>
+        {/* Arrow — positioned to point at exact target center */}
+        <div style={{
+          position:"absolute",
+          bottom: -24,
+          left: arrowLeft,
+          color: s.accent,
+          fontSize: 26,
+          lineHeight: 1,
+          animation:"floatY 1s ease-in-out infinite",
+          userSelect:"none",
+        }}>↓</div>
 
-        {/* Dots + skip */}
+        {/* Progress dots + skip */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
           <div style={{display:"flex",gap:5}}>
             {TUTORIAL_STEPS.map((_,i)=>(
@@ -1714,16 +1714,15 @@ function Tutorial({onDone}) {
                 background:i===step?s.accent:"rgba(255,255,255,0.15)",transition:"all 0.3s"}}/>
             ))}
           </div>
-          <button onClick={onDone} style={{background:"none",border:"none",
-            color:"rgba(100,116,139,0.5)",fontSize:11,cursor:"pointer",
-            fontFamily:"'Outfit',sans-serif",fontWeight:600,letterSpacing:"0.04em"}}>Skip</button>
+          <button onClick={onDone} style={{background:"none",border:"none",color:"rgba(100,116,139,0.5)",
+            fontSize:11,cursor:"pointer",fontFamily:"'Outfit',sans-serif",fontWeight:600}}>Skip</button>
         </div>
 
         <div style={{fontFamily:"'DM Serif Display',serif",fontSize:16,color:"#f8fafc",marginBottom:6}}>{s.title}</div>
-        <div style={{fontSize:12,color:"rgba(148,163,184,0.85)",lineHeight:1.65,marginBottom:14}}>{s.body}</div>
+        <div style={{fontSize:12,color:"rgba(148,163,184,0.85)",lineHeight:1.65,marginBottom:12}}>{s.body}</div>
 
         <button onClick={()=>isLast?onDone():setStep(n=>n+1)} style={{
-          width:"100%",padding:"11px",border:"none",borderRadius:12,cursor:"pointer",
+          width:"100%",padding:"10px",border:"none",borderRadius:12,cursor:"pointer",
           background:`linear-gradient(135deg,${s.accent}cc,${s.accent})`,
           color:"#fff",fontSize:13,fontWeight:700,fontFamily:"'Outfit',sans-serif",
           boxShadow:`0 0 14px ${s.accent}40`,
@@ -1736,7 +1735,6 @@ function Tutorial({onDone}) {
 }
 
 /* ── App ─────────────────────────────────────────────────────────────────── */
-// Summary removed — year-by-year view folded into Dashboard
 const NAV=[
   {id:"dashboard",label:"Home",    icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h3a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h3a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>},
   {id:"history",  label:"History", icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd"/></svg>},
@@ -1750,10 +1748,13 @@ export default function App({ user }) {
   const [showAdd,setShowAdd]   = useState(false);
   const [editing,setEditing]   = useState(null);
   const [showOnboard,setShowOnboard] = useState(true);
-  const [showTutorial,setShowTutorial] = useState(false); // shows after onboard
+  const [showTutorial,setShowTutorial] = useState(false);
   const [fileToUpload,setFileToUpload] = useState(null);
 
-  // Build unique patient list for autocomplete
+  // Refs for tutorial targeting — one per nav tab + fab
+  const fabRef   = useRef(null);
+  const navRefs  = [useRef(null), useRef(null), useRef(null), useRef(null)]; // Home History Eligible Export
+
   const knownPatients = [...new Set(expenses.map(e=>e.patient).filter(Boolean))].sort();
 
   const handleAdd = async (data, file) => {
@@ -1803,7 +1804,7 @@ export default function App({ user }) {
       {!showOnboard && (
         <>
           <BG/>
-          {/* Sign out button */}
+          {/* Sign out */}
           <div style={{position:"fixed",top:12,right:16,zIndex:60}}>
             <button onClick={handleSignOut} title={`Signed in as ${user?.displayName||user?.email}`} style={{background:"rgba(15,23,42,0.8)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:20,padding:"6px 12px",color:"rgba(100,116,139,0.7)",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"'Outfit',sans-serif",backdropFilter:"blur(10px)",display:"flex",alignItems:"center",gap:6}}>
               <div style={{width:22,height:22,borderRadius:"50%",background:"linear-gradient(135deg,#0ea5e9,#2563eb)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"#fff",fontWeight:700,flexShrink:0}}>
@@ -1820,13 +1821,15 @@ export default function App({ user }) {
             {page==="export"    && <Export    expenses={expenses}/>}
           </div>
 
-          <button onClick={()=>setShowAdd(true)} className="glow-btn" style={{position:"fixed",bottom:84,right:20,width:56,height:56,borderRadius:"50%",border:"none",background:"linear-gradient(135deg,#0ea5e9,#2563eb)",color:"#fff",fontSize:28,cursor:"pointer",zIndex:50,display:"flex",alignItems:"center",justifyContent:"center",animation:"glowPulse 3s ease-in-out infinite"}}>+</button>
+          {/* FAB — ref'd for tutorial */}
+          <button ref={fabRef} onClick={()=>setShowAdd(true)} className="glow-btn" style={{position:"fixed",bottom:84,right:20,width:56,height:56,borderRadius:"50%",border:"none",background:"linear-gradient(135deg,#0ea5e9,#2563eb)",color:"#fff",fontSize:28,cursor:"pointer",zIndex:50,display:"flex",alignItems:"center",justifyContent:"center",animation:"glowPulse 3s ease-in-out infinite"}}>+</button>
 
+          {/* Nav — each tab ref'd for tutorial */}
           <nav style={{position:"fixed",bottom:0,left:0,right:0,zIndex:50,display:"flex",justifyContent:"space-around",padding:"12px 0 20px",background:"rgba(2,5,9,0.88)",backdropFilter:"blur(20px)",borderTop:"1px solid rgba(255,255,255,0.06)"}}>
-            {NAV.map(item=>{
+            {NAV.map((item,i)=>{
               const active=page===item.id;
               return (
-                <button key={item.id} onClick={()=>setPage(item.id)} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,background:"none",border:"none",color:active?"#38bdf8":"rgba(100,116,139,0.6)",cursor:"pointer",fontFamily:"'Outfit',sans-serif",fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",padding:"4px 12px",transition:"color 0.2s"}}>
+                <button key={item.id} ref={navRefs[i]} onClick={()=>setPage(item.id)} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,background:"none",border:"none",color:active?"#38bdf8":"rgba(100,116,139,0.6)",cursor:"pointer",fontFamily:"'Outfit',sans-serif",fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",padding:"4px 12px",transition:"color 0.2s"}}>
                   <span style={{filter:active?"drop-shadow(0 0 6px rgba(56,189,248,0.7))":"none",transition:"filter 0.2s"}}>{item.icon}</span>
                   {item.label}
                 </button>
@@ -1836,10 +1839,9 @@ export default function App({ user }) {
 
           {showAdd  && <AddModal  onClose={()=>setShowAdd(false)}  onSave={handleAdd}  knownPatients={knownPatients}/>}
           {editing  && <EditModal expense={editing} onClose={()=>setEditing(null)} onSave={handleEdit} knownPatients={knownPatients}/>}
-          {showTutorial && <Tutorial onDone={()=>setShowTutorial(false)}/>}
+          {showTutorial && <Tutorial onDone={()=>setShowTutorial(false)} fabRef={fabRef} navRefs={navRefs}/>}
         </>
       )}
     </div>
   );
 }
-
