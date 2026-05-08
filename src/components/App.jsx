@@ -767,15 +767,21 @@ function ExpenseForm({initial, onSave, onClose, title, subtitle, saveLabel, know
   const [catOpen,setCatOpen]=useState(false);
   const [subOpen,setSubOpen]=useState(false);
   const [patientFocus,setPatientFocus]=useState(false);
+  const [selectedFile,setSelectedFile]=useState(null); // actual File object
   const fileRef=useRef();
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
   const subItems=ELIGIBLE[form.category]||[];
   const selColor=CAT_COLORS[form.category]||"#94a3b8";
   const handleSubmit=async()=>{
-    if(!form.amount||!form.provider||!form.date) return alert("Please fill in Date, Provider, and Amount.");
+    if(!form.amount||!form.provider||!form.date) return alert("Please fill in Date of Expense, Provider, and Amount.");
     setSaving(true);
-    await new Promise(r=>setTimeout(r,350));
-    onSave({...form,amount:parseFloat(form.amount)});
+    try {
+      await onSave({...form,amount:parseFloat(form.amount)}, selectedFile);
+    } catch(e) {
+      console.error(e);
+      alert("Error saving. Please try again.");
+    }
+    setSaving(false);
   };
 
   // Autocomplete suggestions — filter known names by what's typed
@@ -798,7 +804,7 @@ function ExpenseForm({initial, onSave, onClose, title, subtitle, saveLabel, know
         </div>
 
         <label style={lbl}>Date of Expense *</label>
-        <input style={inp} type="date" value={form.date} onChange={e=>set("date",e.target.value)}/>
+        <input style={inp} type="date" value={form.date} max={new Date().toISOString().slice(0,10)} onChange={e=>set("date",e.target.value)}/>
 
         {/* For field with autocomplete */}
         <label style={lbl}>For *</label>
@@ -901,7 +907,7 @@ function ExpenseForm({initial, onSave, onClose, title, subtitle, saveLabel, know
             :<><div style={{fontSize:26}}>📄</div><div style={{color:"rgba(100,116,139,0.6)",fontSize:12,marginTop:6}}>Tap to attach PDF or image</div></>
           }
         </div>
-        <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.heic,.doc,.docx" style={{display:"none"}} onChange={e=>{const f=e.target.files?.[0];if(f)set("fileName",f.name);}}/>
+        <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.heic,.doc,.docx" style={{display:"none"}} onChange={e=>{const f=e.target.files?.[0];if(f){setSelectedFile(f);set("fileName",f.name);}}}/>
 
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:"rgba(52,211,153,0.06)",border:"1px solid rgba(52,211,153,0.15)",borderRadius:14,padding:"14px 16px",marginBottom:24}}>
           <div>
@@ -923,11 +929,11 @@ function ExpenseForm({initial, onSave, onClose, title, subtitle, saveLabel, know
 
 function AddModal({onClose,onSave,knownPatients}) {
   const blank={date:new Date().toISOString().slice(0,10),amount:"",patient:"",provider:"",category:"Doctor & Hospital",subcategory:"",paymentType:"Credit Card",notes:"",fileName:"",reimbursed:false};
-  return <ExpenseForm initial={blank} onSave={e=>{onSave({...e,id:uid()});}} onClose={onClose} title="Log Expense" subtitle="Add a medical expense to your vault" saveLabel="Save Expense" knownPatients={knownPatients}/>;
+  return <ExpenseForm initial={blank} onSave={(data,file)=>onSave(data,file)} onClose={onClose} title="Log Expense" subtitle="Add a medical expense to your vault" saveLabel="Save Expense" knownPatients={knownPatients}/>;
 }
 
 function EditModal({expense,onClose,onSave,knownPatients}) {
-  return <ExpenseForm initial={{...expense}} onSave={onSave} onClose={onClose} title="Edit Expense" subtitle="Update this expense record" saveLabel="Save Changes" knownPatients={knownPatients}/>;
+  return <ExpenseForm initial={{...expense}} onSave={(data,file)=>onSave(data,file)} onClose={onClose} title="Edit Expense" subtitle="Update this expense record" saveLabel="Save Changes" knownPatients={knownPatients}/>;
 }
 
 /* ── Expense Row with edit + receipt view ─────────────────────────────────── */
@@ -948,7 +954,7 @@ function ExpRow({expense,onDelete,onToggle,onEdit,delay=0}) {
             <span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:20,background:`${color}18`,color,border:`1px solid ${color}30`}}>{expense.category}</span>
             {expense.subcategory&&<span style={{fontSize:10,padding:"2px 8px",borderRadius:20,background:"rgba(255,255,255,0.05)",color:"rgba(148,163,184,0.7)",border:"1px solid rgba(255,255,255,0.06)"}}>{expense.subcategory}</span>}
             {expense.reimbursed
-              ?<span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,background:"rgba(52,211,153,0.12)",color:"#34d399",border:"1px solid rgba(52,211,153,0.25)"}}>✓ Done</span>
+              ?<span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,background:"rgba(52,211,153,0.12)",color:"#34d399",border:"1px solid rgba(52,211,153,0.25)"}}>✓ Reimbursed</span>
               :<span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,background:"rgba(251,191,36,0.1)",color:"#fbbf24",border:"1px solid rgba(251,191,36,0.2)"}}>Pending</span>
             }
             <span style={{fontSize:11,color:"rgba(100,116,139,0.8)",marginLeft:"auto"}}>{fmtDate(expense.date)}</span>
@@ -959,14 +965,14 @@ function ExpRow({expense,onDelete,onToggle,onEdit,delay=0}) {
         {/* Action buttons */}
         <div style={{display:"flex",flexDirection:"column",gap:4,flexShrink:0}}>
           <button onClick={()=>onEdit(expense)} style={{background:"none",border:"none",color:"rgba(56,189,248,0.4)",cursor:"pointer",fontSize:14,lineHeight:1,padding:"2px 4px",transition:"color 0.2s"}} onMouseEnter={e=>e.target.style.color="#38bdf8"} onMouseLeave={e=>e.target.style.color="rgba(56,189,248,0.4)"} title="Edit">✎</button>
-          <button onClick={()=>onDelete(expense.id)} style={{background:"none",border:"none",color:"rgba(248,113,113,0.3)",cursor:"pointer",fontSize:16,lineHeight:1,padding:"2px 4px",transition:"color 0.2s"}} onMouseEnter={e=>e.target.style.color="rgba(248,113,113,0.8)"} onMouseLeave={e=>e.target.style.color="rgba(248,113,113,0.3)"} title="Delete">×</button>
+          <button onClick={()=>onDelete(expense)} style={{background:"none",border:"none",color:"rgba(248,113,113,0.3)",cursor:"pointer",fontSize:16,lineHeight:1,padding:"2px 4px",transition:"color 0.2s"}} onMouseEnter={e=>e.target.style.color="rgba(248,113,113,0.8)"} onMouseLeave={e=>e.target.style.color="rgba(248,113,113,0.3)"} title="Delete">×</button>
         </div>
       </div>
 
       {/* Detail / Receipt modal */}
       {showDetail&&(
-        <div style={{position:"fixed",inset:0,background:"rgba(2,5,9,0.85)",zIndex:400,display:"flex",alignItems:"flex-end",justifyContent:"center",backdropFilter:"blur(8px)"}} onClick={()=>setShowDetail(false)}>
-          <div className="slide-in" style={{background:"linear-gradient(180deg,#0d1829,#080f1e)",borderRadius:"24px 24px 0 0",width:"100%",maxWidth:480,maxHeight:"80vh",overflowY:"auto",padding:"24px 20px 44px",border:"1px solid rgba(56,189,248,0.15)",borderBottom:"none",boxShadow:"0 -20px 60px rgba(0,0,0,0.9)"}} onClick={e=>e.stopPropagation()}>
+        <div style={{position:"fixed",inset:0,background:"rgba(2,5,9,0.85)",zIndex:400,display:"flex",alignItems:"flex-start",justifyContent:"center",paddingTop:40,backdropFilter:"blur(8px)"}} onClick={()=>setShowDetail(false)}>
+          <div className="slide-in" style={{background:"linear-gradient(180deg,#0d1829,#080f1e)",borderRadius:24,width:"calc(100% - 32px)",maxWidth:480,maxHeight:"88vh",overflowY:"auto",padding:"24px 20px 44px",border:"1px solid rgba(56,189,248,0.15)",boxShadow:"0 20px 60px rgba(0,0,0,0.9)"}} onClick={e=>e.stopPropagation()}>
             <div style={{width:36,height:4,borderRadius:2,background:"rgba(255,255,255,0.15)",margin:"0 auto 20px"}}/>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20}}>
               <div>
@@ -1599,18 +1605,18 @@ ${exps.map(e=>`<tr>
       <div className="fu3" style={{display:"flex",flexDirection:"column",gap:10}}>
         <button onClick={downloadHTML} disabled={!filtered.length} className="glow-btn" style={{width:"100%",padding:"16px",border:"none",borderRadius:16,cursor:filtered.length?"pointer":"not-allowed",background:filtered.length?"linear-gradient(135deg,#0ea5e9,#2563eb)":"rgba(255,255,255,0.06)",color:filtered.length?"#fff":"rgba(100,116,139,0.5)",fontSize:15,fontWeight:700,fontFamily:"'Outfit',sans-serif",letterSpacing:"0.04em",boxShadow:filtered.length?"0 0 24px rgba(14,165,233,0.35)":"none",transition:"all 0.2s",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
           <span style={{fontSize:20}}>📄</span>
-          {done?"Downloaded!":"Download Report (HTML/Print to PDF)"}
+          {done?"Downloaded! ✓":"Download Expense Report"}
         </button>
         <button onClick={downloadCSV} disabled={!filtered.length} style={{width:"100%",padding:"15px",border:"1px solid rgba(255,255,255,0.1)",borderRadius:16,cursor:filtered.length?"pointer":"not-allowed",background:"rgba(255,255,255,0.04)",color:filtered.length?"#e2e8f0":"rgba(100,116,139,0.5)",fontSize:14,fontWeight:600,fontFamily:"'Outfit',sans-serif",transition:"all 0.2s",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
           <span style={{fontSize:18}}>📊</span>
-          Download Spreadsheet (CSV)
+          Download for Excel / Google Sheets
         </button>
       </div>
 
       <div style={{marginTop:16,background:"rgba(56,189,248,0.05)",border:"1px solid rgba(56,189,248,0.12)",borderRadius:14,padding:"13px 15px",fontSize:12,color:"rgba(100,116,139,0.75)",lineHeight:1.8}}>
-        <div style={{marginBottom:8}}><span style={{color:"#38bdf8",fontWeight:600}}>💡 For HSA claims:</span> Download the report, open it in your browser, and use Print → Save as PDF for a clean PDF to submit with your claim.</div>
-        <div style={{marginBottom:8}}><span style={{color:"#fbbf24",fontWeight:600}}>📎 Receipt backup:</span> Your actual receipt files are stored securely in HSA Vault's cloud. To back them up yourself, open each expense, tap the receipt filename, and save it to your device or Google Drive. We recommend keeping a personal backup folder organized by year.</div>
-        <div><span style={{color:"#34d399",fontWeight:600}}>⏳ No time limit:</span> Keep copies indefinitely — there is no statute of limitations on HSA self-reimbursements as long as expenses occurred after your HSA opened.</div>
+        <div style={{marginBottom:8}}><span style={{color:"#38bdf8",fontWeight:600}}>💡 For HSA claims:</span> Download your report and save it alongside your receipts. This is your documentation for the IRS when you reimburse yourself.</div>
+        <div style={{marginBottom:8}}><span style={{color:"#fbbf24",fontWeight:600}}>📎 Receipt backup:</span> To back up your receipts, open each expense, tap the receipt, and save it to your device or Google Drive. We recommend a folder per year.</div>
+        <div><span style={{color:"#34d399",fontWeight:600}}>⏳ No time limit:</span> There is no statute of limitations on HSA reimbursements — as long as the expense occurred after your HSA opened.</div>
       </div>
     </div>
   );
@@ -1758,9 +1764,8 @@ export default function App({ user }) {
   const knownPatients = [...new Set(expenses.map(e=>e.patient).filter(Boolean))].sort();
 
   const handleAdd = async (data, file) => {
-    await addExpense(user.uid, data, file);
+    await addExpense(user.uid, {...data, id:uid()}, file);
     setShowAdd(false);
-    setFileToUpload(null);
   };
 
   const handleEdit = async (data, file) => {
